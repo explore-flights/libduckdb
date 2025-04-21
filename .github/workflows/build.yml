@@ -1,0 +1,37 @@
+name: 'Build'
+
+on:
+  push:
+    branches:
+      - 'main'
+
+env:
+  USE_MERGED_VCPKG_MANIFEST: '1'
+  VCPKG_TARGET_TRIPLET: 'arm64-linux'
+  DUCKDB_PLATFORM: 'linux_arm64'
+  EXTENSION_CONFIGS: '../extension_config.cmake'
+
+jobs:
+  build_duckdb:
+    name: 'Build DuckDB'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+      - name: 'Checkout DuckDB'
+        uses: actions/checkout@v4
+        with:
+          repository: 'duckdb/duckdb'
+          ref: 'v1.2.2'
+          fetch-depth: 0
+          path: duckdb
+      - name: 'Setup DuckDB Build Tools'
+        uses: ./duckdb/.github/actions/ubuntu_18_setup
+        with:
+          openssl: 1
+          python: 1
+          aarch64_cross_compile: 1
+          vcpkg: 1
+      - name: 'Build DuckDB'
+        working-directory: duckdb
+        run: make extension_configuration && make bundle-library
