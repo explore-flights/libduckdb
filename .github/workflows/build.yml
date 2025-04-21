@@ -35,9 +35,26 @@ jobs:
             --build-arg 'extra_toolchains=;python3;' \
             -t duckdb_builder/linux_arm64 \
             ./extension-ci-tools/docker/linux_arm64
+      - name: 'Generate timestamp for Ccache entry'
+        shell: cmake -P {0}
+        id: ccache_timestamp
+        run: |
+          string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
+          message("::set-output name=timestamp::${current_date}")
+      - name: 'Create Ccache directory'
+        run: |
+          mkdir ccache_dir
+      - name: Load Ccache
+        uses: actions/cache@v4
+        with:
+          path: ./ccache_dir
+          key: ccache-extension-distribution-linux_arm64-${{ steps.ccache_timestamp.outputs.timestamp }}
+          restore-keys: |
+            ccache-extension-distribution-linux_arm64-
       - name: 'Build DuckDB'
         run: |
           docker run                                                             \
+          -v./ccache_dir:/ccache_dir                                             \
           -v./duckdb:/duckdb                                                     \
           -v./extension_config.cmake:/extension_config.cmake:ro                  \
           -e CC=aarch64-linux-gnu-gcc                                            \
@@ -51,4 +68,8 @@ jobs:
           -e USE_MERGED_VCPKG_MANIFEST=1                                         \
           -e LINUX_CI_IN_DOCKER=1                                                \
           duckdb_builder/linux_arm64                                             \
-          bash -c "/duckdb/scripts/setup_ubuntu1804.sh && git config --global --add safe.directory /duckdb && make -C /duckdb extension_configuration && make -C /duckdb bundle-library"
+          bash -c "git config --global --add safe.directory /duckdb && make -C /duckdb extension_configuration && make -C /duckdb bundle-library"
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          path: './duckdb/build/release/libduckdb_bundle.a'
