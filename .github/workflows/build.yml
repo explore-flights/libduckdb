@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - 'main'
+    tags:
+      - "*"
 
 jobs:
   build_duckdb:
@@ -89,6 +91,7 @@ jobs:
           path: './duckdb/build/release/libduckdb_bundle.a'
 
   release:
+    if: github.ref_type == 'tag'
     name: 'Release'
     permissions:
       contents: write
@@ -99,8 +102,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: Release
+      - name: 'Rename Artifacts'
+        working-directory: artifacts
+        run: |
+          mv libduckdb_bundle-v1.2.2-linux_arm64/libduckdb_bundle.a libduckdb_bundle-v1.2.2-linux_arm64.a
+          mv libduckdb_bundle-v1.2.2-linux_amd64/libduckdb_bundle.a libduckdb_bundle-v1.2.2-linux_amd64.a
+      - name: 'Release'
         uses: softprops/action-gh-release@v2
         with:
-          files: 'artifacts/**/*.a'
+          files: 'artifacts/*.a'
           make_latest: true
