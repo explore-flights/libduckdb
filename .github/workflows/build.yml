@@ -74,6 +74,8 @@ jobs:
           -v./extension_config.cmake:/extension_config.cmake:ro                  \
           -e CC=${{ matrix.cc }}                                                 \
           -e CXX=${{ matrix.cxx }}                                               \
+          -e CFLAGS=-fPIC                                                        \
+          -e CXXFLAGS=-fPIC                                                      \
           -e CMAKE_BUILD_PARALLEL_LEVEL=2                                        \
           -e EXTENSION_CONFIGS='/extension_config.cmake'                         \
           -e ENABLE_EXTENSION_AUTOLOADING=1                                      \
