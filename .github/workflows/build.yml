@@ -5,12 +5,6 @@ on:
     branches:
       - 'main'
 
-env:
-  USE_MERGED_VCPKG_MANIFEST: '1'
-  VCPKG_TARGET_TRIPLET: 'arm64-linux'
-  DUCKDB_PLATFORM: 'linux_arm64'
-  EXTENSION_CONFIGS: '../extension_config.cmake'
-
 jobs:
   build_duckdb:
     name: 'Build DuckDB'
@@ -18,20 +12,43 @@ jobs:
     steps:
       - name: 'Checkout'
         uses: actions/checkout@v4
+      - name: 'Checkout Extension CI tools'
+        uses: actions/checkout@v4
+        with:
+          repository: 'duckdb/extension-ci-tools'
+          ref: 'main'
+          fetch-depth: 0
+          path: 'extension-ci-tools'
       - name: 'Checkout DuckDB'
         uses: actions/checkout@v4
         with:
           repository: 'duckdb/duckdb'
           ref: 'v1.2.2'
           fetch-depth: 0
-          path: duckdb
-      - name: 'Setup DuckDB Build Tools'
-        uses: ./duckdb/.github/actions/ubuntu_18_setup
-        with:
-          openssl: 1
-          python: 1
-          aarch64_cross_compile: 1
-          vcpkg: 1
+          path: 'duckdb'
+      - name: 'Build Builder Docker image'
+        shell: bash
+        run: |
+          docker build \
+            --build-arg 'vcpkg_url=https://github.com/microsoft/vcpkg.git' \
+            --build-arg 'vcpkg_commit=5e5d0e1cd7785623065e77eff011afdeec1a3574' \
+            --build-arg 'extra_toolchains=;python3;' \
+            -t duckdb_builder/linux_arm64 \
+            ./extension-ci-tools/docker/linux_arm64
       - name: 'Build DuckDB'
-        working-directory: duckdb
-        run: make extension_configuration && make bundle-library
+        run: |
+          docker run                                                             \
+          -v./duckdb:/duckdb                                                     \
+          -v./extension_config.cmake:/extension_config.cmake:ro                  \
+          -e CC=aarch64-linux-gnu-gcc                                            \
+          -e CXX=aarch64-linux-gnu-g++                                           \
+          -e CMAKE_BUILD_PARALLEL_LEVEL=2                                        \
+          -e EXTENSION_CONFIGS='/extension_config.cmake'                         \
+          -e ENABLE_EXTENSION_AUTOLOADING=1                                      \
+          -e ENABLE_EXTENSION_AUTOINSTALL=1                                      \
+          -e DUCKDB_PLATFORM=linux_arm64                                         \
+          -e VCPKG_TARGET_TRIPLET=arm64-linux                                    \
+          -e USE_MERGED_VCPKG_MANIFEST=1                                         \
+          -e LINUX_CI_IN_DOCKER=1                                                \
+          duckdb_builder/linux_arm64                                             \
+          bash -c "/duckdb/scripts/setup_ubuntu1804.sh && git config --global --add safe.directory /duckdb && make -C /duckdb extension_configuration && make -C /duckdb bundle-library"
