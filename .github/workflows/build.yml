@@ -44,11 +44,13 @@ jobs:
           -e ENABLE_EXTENSION_AUTOINSTALL=1                                                                            \
           -e BUILD_BENCHMARK=1                                                                                         \
           -e FORCE_WARN_UNUSED=1                                                                                       \
-          -e "OPENSSL_ROOT_DIR=$PWD/duckdb/build/release/vcpkg_installed/${{ matrix.vcpkg_target_triplet }}"           \
-          -e "OPENSSL_DIR=$PWD/duckdb/build/release/vcpkg_installed/${{ matrix.vcpkg_target_triplet }}"                \
-          -e "OPENSSL_USE_STATIC_LIBS=true"                                                                            \
+          -e VCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_target_triplet }}                                                   \
+          -e VCPKG_ROOT=$PWD/duckdb/vcpkg                                                                              \
+          -e VCPKG_TOOLCHAIN_PATH=$PWD/duckdb/scripts/buildsystems/vcpkg.cmake                                         \
+          -e USE_MERGED_VCPKG_MANIFEST=1                                                                               \
+          -e STATIC_OPENSSL=1                                                                                          \
           quay.io/pypa/manylinux_2_28_${{ matrix.image }}                                                              \
-          bash -c "yum install -y perl-IPC-Cmd && git config --global --add safe.directory $PWD/duckdb && make gather-libs -C $PWD/duckdb"
+          bash -c "yum install -y perl-IPC-Cmd openssl-devel && (cd $PWD/duckdb && bash $PWD/install_vcpkg.sh) && git config --global --add safe.directory $PWD/duckdb && make gather-libs -C $PWD/duckdb"
 
       - name: 'Print platform'
         run: ./duckdb/build/release/duckdb -c "PRAGMA platform;"
