@@ -19,11 +19,13 @@ jobs:
             cc: 'aarch64-linux-gnu-gcc'
             cxx: 'aarch64-linux-gnu-g++'
             vcpkg_target_triplet: 'arm64-linux'
+            toolchain_flags: '-DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ -DCMAKE_Fortran_COMPILER=aarch64-linux-gnu-gfortran'
           - duckdb_version: 'v1.2.2'
             duckdb_platform: 'linux_amd64'
-            cc: 'gcc'
-            cxx: 'g++'
+            cc: ''
+            cxx: ''
             vcpkg_target_triplet: 'x64-linux'
+            toolchain_flags: ''
     steps:
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -68,23 +70,27 @@ jobs:
             ccache-extension-distribution-${{ matrix.duckdb_platform }}-
       - name: 'Build DuckDB'
         run: |
-          docker run                                                             \
-          -v./ccache_dir:/ccache_dir                                             \
-          -v./duckdb:/duckdb                                                     \
-          -v./extension_config.cmake:/extension_config.cmake:ro                  \
-          -e CC=${{ matrix.cc }}                                                 \
-          -e CXX=${{ matrix.cxx }}                                               \
-          -e CFLAGS=-fPIC                                                        \
-          -e CXXFLAGS=-fPIC                                                      \
-          -e CMAKE_BUILD_PARALLEL_LEVEL=2                                        \
-          -e EXTENSION_CONFIGS='/extension_config.cmake'                         \
-          -e ENABLE_EXTENSION_AUTOLOADING=1                                      \
-          -e ENABLE_EXTENSION_AUTOINSTALL=1                                      \
-          -e DUCKDB_PLATFORM=${{ matrix.duckdb_platform }}                       \
-          -e VCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_target_triplet }}             \
-          -e USE_MERGED_VCPKG_MANIFEST=1                                         \
-          -e LINUX_CI_IN_DOCKER=1                                                \
-          duckdb_builder                                                         \
+          docker run                                                                                                   \
+          -v ./ccache_dir:/ccache_dir                                                                                  \
+          -v ./duckdb:/duckdb                                                                                          \
+          -v ./extension_config.cmake:/extension_config.cmake:ro                                                       \
+          -e "CC=${{ matrix.cc }}"                                                                                     \
+          -e "CXX=${{ matrix.cxx }}"                                                                                   \
+          -e "CFLAGS=-fPIC"                                                                                            \
+          -e "CXXFLAGS=-fPIC"                                                                                          \
+          -e "CMAKE_BUILD_PARALLEL_LEVEL=2"                                                                            \
+          -e "EXTENSION_CONFIGS='/extension_config.cmake'"                                                             \
+          -e "ENABLE_EXTENSION_AUTOLOADING=1"                                                                          \
+          -e "ENABLE_EXTENSION_AUTOINSTALL=1"                                                                          \
+          -e "DUCKDB_PLATFORM=${{ matrix.duckdb_platform }}"                                                           \
+          -e "VCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_target_triplet }}"                                                 \
+          -e "USE_MERGED_VCPKG_MANIFEST=1"                                                                             \
+          -e "LINUX_CI_IN_DOCKER=1"                                                                                    \
+          -e "OPENSSL_ROOT_DIR=/duckdb/build/release/vcpkg_installed/${{ matrix.vcpkg_target_triplet }}"               \
+          -e "OPENSSL_DIR=/duckdb/build/release/vcpkg_installed/${{ matrix.vcpkg_target_triplet }}"                    \
+          -e "OPENSSL_USE_STATIC_LIBS=true"                                                                            \
+          -e "TOOLCHAIN_FLAGS=${{ matrix.toolchain_flags }}"                                                           \
+          duckdb_builder                                                                                               \
           bash -c "git config --global --add safe.directory /duckdb && make -C /duckdb extension_configuration && make -C /duckdb bundle-library"
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@v4
