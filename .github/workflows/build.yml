@@ -50,7 +50,7 @@ jobs:
           -e USE_MERGED_VCPKG_MANIFEST=1                                                                               \
           -e STATIC_OPENSSL=1                                                                                          \
           quay.io/pypa/manylinux_2_28_${{ matrix.image }}                                                              \
-          bash -c "yum install -y perl-IPC-Cmd curl zip unzip tar && (cd $PWD/duckdb && bash $PWD/install_vcpkg.sh) && git config --global --add safe.directory $PWD/duckdb && make gather-libs -C $PWD/duckdb"
+          bash -c "yum install -y perl-IPC-Cmd curl zip unzip tar gcc-c++ && (cd $PWD/duckdb && bash $PWD/install_vcpkg.sh) && git config --global --add safe.directory $PWD/duckdb && make gather-libs -C $PWD/duckdb"
 
       - name: 'Print platform'
         run: ./duckdb/build/release/duckdb -c "PRAGMA platform;"
