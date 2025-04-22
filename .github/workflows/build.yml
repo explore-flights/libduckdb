@@ -51,7 +51,7 @@ jobs:
           -e STATIC_OPENSSL=1                                                                                          \
           -e STATIC_LIBCPP=1                                                                                           \
           -e EXTENSION_STATIC_BUILD=1                                                                                  \
-          -e COMMON_CMAKE_VARS=-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++                                         \
+          -e "COMMON_CMAKE_VARS=-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"                                       \
           quay.io/pypa/manylinux_2_28_${{ matrix.image }}                                                              \
           bash -c "yum install -y perl-IPC-Cmd curl zip unzip tar gcc gcc-c++ ninja-build && (cd $PWD/duckdb && bash $PWD/install_vcpkg.sh) && git config --global --add safe.directory $PWD/duckdb && make gather-libs -C $PWD/duckdb"
 
