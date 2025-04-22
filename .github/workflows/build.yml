@@ -12,9 +12,17 @@ jobs:
     # https://github.com/duckdb/duckdb/blob/1a9dc44fc96725e03a258270bfe397460d882917/.github/workflows/BundleStaticLibs.yml#L163
     strategy:
       matrix:
-        config: [ { runner: ubuntu-latest, arch: amd64, image: x86_64 }, { runner: ubuntu-24.04-arm, arch: arm64, image: aarch64 } ]
-    name: 'Build Static DuckDB Library (${{ matrix.config.arch }})'
-    runs-on: ${{ matrix.config.runner }}
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+            image: x86_64
+            vcpkg_target_triplet: arm64-linux
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            image: aarch64
+            vcpkg_target_triplet: x64-linux
+    name: 'Build Static DuckDB Library (${{ matrix.arch }})'
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -28,15 +36,18 @@ jobs:
       - name: Build
         run: |
           export PWD=`pwd`
-          docker run                                                             \
-          -v$PWD:$PWD                                                            \
-          -e CMAKE_BUILD_PARALLEL_LEVEL=2                                        \
-          -e EXTENSION_CONFIGS="$PWD/extension_config.cmake"                     \
-          -e ENABLE_EXTENSION_AUTOLOADING=1                                      \
-          -e ENABLE_EXTENSION_AUTOINSTALL=1                                      \
-          -e BUILD_BENCHMARK=1                                                   \
-          -e FORCE_WARN_UNUSED=1                                                 \
-          quay.io/pypa/manylinux_2_28_${{ matrix.config.image }}                 \
+          docker run                                                                                                   \
+          -v$PWD:$PWD                                                                                                  \
+          -e CMAKE_BUILD_PARALLEL_LEVEL=2                                                                              \
+          -e EXTENSION_CONFIGS="$PWD/extension_config.cmake"                                                           \
+          -e ENABLE_EXTENSION_AUTOLOADING=1                                                                            \
+          -e ENABLE_EXTENSION_AUTOINSTALL=1                                                                            \
+          -e BUILD_BENCHMARK=1                                                                                         \
+          -e FORCE_WARN_UNUSED=1                                                                                       \
+          -e "OPENSSL_ROOT_DIR=$PWD/duckdb/build/release/vcpkg_installed/${{ matrix.vcpkg_target_triplet }}"           \
+          -e "OPENSSL_DIR=$PWD/duckdb/build/release/vcpkg_installed/${{ matrix.vcpkg_target_triplet }}"                \
+          -e "OPENSSL_USE_STATIC_LIBS=true"                                                                            \
+          quay.io/pypa/manylinux_2_28_${{ matrix.image }}                                                              \
           bash -c "yum install -y perl-IPC-Cmd && git config --global --add safe.directory $PWD/duckdb && make gather-libs -C $PWD/duckdb"
 
       - name: 'Print platform'
@@ -46,13 +57,13 @@ jobs:
         working-directory: duckdb
         run: |
           python3 scripts/amalgamation.py
-          zip -r -j static-libs-linux-${{ matrix.config.arch }}.zip src/include/duckdb.h build/release/libs/
+          zip -r -j static-libs-linux-${{ matrix.arch }}.zip src/include/duckdb.h build/release/libs/
 
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@v4
         with:
-          name: 'duckdb-static-libs-linux-${{ matrix.config.arch }}'
-          path: 'duckdb/static-libs-linux-${{ matrix.config.arch }}.zip'
+          name: 'duckdb-static-libs-linux-${{ matrix.arch }}'
+          path: 'duckdb/static-libs-linux-${{ matrix.arch }}.zip'
 
   release:
     if: github.ref_type == 'tag'
