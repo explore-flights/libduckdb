@@ -5,70 +5,50 @@ on:
     branches:
       - 'main'
     tags:
-      - "*"
+      - '*'
 
 jobs:
   build_duckdb:
     # https://github.com/duckdb/duckdb/blob/1a9dc44fc96725e03a258270bfe397460d882917/.github/workflows/BundleStaticLibs.yml#L163
     strategy:
       matrix:
-        include:
+        config:
           - runner: ubuntu-latest
-            arch: amd64
             image: x86_64
-            vcpkg_target_triplet: arm64-linux
-          - runner: ubuntu-24.04-arm
-            arch: arm64
-            image: aarch64
             vcpkg_target_triplet: x64-linux
-    name: 'Build Static DuckDB Library (${{ matrix.arch }})'
-    runs-on: ${{ matrix.runner }}
+            platform: linux/amd64
+          - runner: ubuntu-24.04-arm
+            image: aarch64
+            vcpkg_target_triplet: arm64-linux
+            platform: linux/arm64
+    name: 'Build Static DuckDB Library (${{ matrix.config.vcpkg_target_triplet }})'
+    runs-on: ${{ matrix.config.runner }}
     steps:
       - name: 'Checkout'
         uses: actions/checkout@v4
-      - name: 'Checkout DuckDB'
-        uses: actions/checkout@v4
+      - name: 'Setup QEMU'
+        uses: docker/setup-qemu-action@v3
+      - name: 'Setup Buildx'
+        uses: docker/setup-buildx-action@v3
+      - name: 'Build'
+        uses: docker/build-push-action@v6
         with:
-          repository: 'duckdb/duckdb'
-          ref: 'v1.2.2'
-          fetch-depth: 0
-          path: 'duckdb'
-      - name: Build
-        run: |
-          export PWD=`pwd`
-          docker run                                                                                                   \
-          -v$PWD:$PWD                                                                                                  \
-          -e CMAKE_BUILD_PARALLEL_LEVEL=2                                                                              \
-          -e EXTENSION_CONFIGS="$PWD/extension_config.cmake"                                                           \
-          -e ENABLE_EXTENSION_AUTOLOADING=1                                                                            \
-          -e ENABLE_EXTENSION_AUTOINSTALL=1                                                                            \
-          -e BUILD_BENCHMARK=1                                                                                         \
-          -e FORCE_WARN_UNUSED=1                                                                                       \
-          -e VCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_target_triplet }}                                                   \
-          -e VCPKG_ROOT=$PWD/duckdb/vcpkg                                                                              \
-          -e VCPKG_TOOLCHAIN_PATH=$PWD/duckdb/vcpkg/scripts/buildsystems/vcpkg.cmake                                   \
-          -e USE_MERGED_VCPKG_MANIFEST=1                                                                               \
-          -e STATIC_OPENSSL=1                                                                                          \
-          -e STATIC_LIBCPP=1                                                                                           \
-          -e EXTENSION_STATIC_BUILD=1                                                                                  \
-          -e "COMMON_CMAKE_VARS=-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"                                       \
-          quay.io/pypa/manylinux_2_28_${{ matrix.image }}                                                              \
-          bash -c "yum install -y perl-IPC-Cmd curl zip unzip tar gcc gcc-c++ ninja-build && (cd $PWD/duckdb && bash $PWD/install_vcpkg.sh) && git config --global --add safe.directory $PWD/duckdb && make gather-libs -G "Ninja" -C $PWD/duckdb"
-
-      - name: 'Print platform'
-        run: ./duckdb/build/release/duckdb -c "PRAGMA platform;"
-
-      - name: 'Bundle'
-        working-directory: duckdb
-        run: |
-          python3 scripts/amalgamation.py
-          zip -r -j static-libs-linux-${{ matrix.arch }}.zip src/include/duckdb.h build/release/libs/
-
+          push: false
+          platforms: ${{ matrix.config.platform }}
+          build-args: |
+            IMAGE=${{ matrix.config.image }}
+            EXTENSION_CONFIG=extension_config.cmake
+            VCPKG_TARGET_TRIPLET=${{ matrix.config.vcpkg_target_triplet }}
+            DUCKDB_GIT_REF=v1.2.2
+            VCPKG_GIT_REF=ce613c41372b23b1f51333815feb3edd87ef8a8b
+          outputs: "type=local,dest=./dist"
+      - name: 'Rename File'
+        run: mv "dist/libduckdb_bundle.a" "dist/libduckdb_bundle-${{ matrix.config.vcpkg_target_triplet }}.a"
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@v4
         with:
-          name: 'duckdb-static-libs-linux-${{ matrix.arch }}'
-          path: 'duckdb/static-libs-linux-${{ matrix.arch }}.zip'
+          name: 'libduckdb_bundle-${{ matrix.config.vcpkg_target_triplet }}.a'
+          path: 'dist/libduckdb_bundle-${{ matrix.config.vcpkg_target_triplet }}.a'
 
   release:
     if: github.ref_type == 'tag'
@@ -85,5 +65,5 @@ jobs:
       - name: 'Release'
         uses: softprops/action-gh-release@v2
         with:
-          files: 'artifacts/**/*.zip'
+          files: 'artifacts/**/libduckdb_bundle-*.a'
           make_latest: true
