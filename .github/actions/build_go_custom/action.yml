@@ -50,6 +50,9 @@ runs:
       uses: docker/setup-qemu-action@v3
     - name: 'Setup Buildx'
       uses: docker/setup-buildx-action@v3
+    - name: 'Copy DuckDB Extension Config to DuckDB Build Context'
+      shell: bash
+      run: cp "${{ inputs.extension_config_path }}" "${{ github.action_path }}/extension_config.cmake"
     - name: 'Build DuckDB'
       uses: docker/build-push-action@v6
       with:
@@ -59,7 +62,7 @@ runs:
         platforms: ${{ inputs.platform }}
         build-args: |
           IMAGE=${{ inputs.image_arch }}
-          EXTENSION_CONFIG=${{ inputs.extension_config_path }}
+          EXTENSION_CONFIG=extension_config.cmake
           VCPKG_TARGET_TRIPLET=${{ inputs.vcpkg_target_triplet }}
           DUCKDB_GIT_REF=${{ inputs.duckdb_git_ref }}
           VCPKG_GIT_REF=${{ inputs.vcpkg_git_ref }}
