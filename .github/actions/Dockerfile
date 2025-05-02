@@ -9,7 +9,7 @@ ARG GO_BUILD_TAGS=''
 ARG GO_BUILD_RELATIVE_DIR=''
 
 # install go
-ADD "https://go.dev/dl/go$GOVERSION.$GOVERSION-$GOARCH.tar.gz" ./go.tar.gz
+ADD "https://go.dev/dl/go$GOOS.$GOVERSION-$GOARCH.tar.gz" ./go.tar.gz
 RUN tar -C /usr/local -xzf go.tar.gz && rm go.tar.gz
 ENV PATH="$PATH:/usr/local/go/bin"
 
