@@ -53,6 +53,7 @@ runs:
       uses: docker/build-push-action@v6
       with:
         push: false
+        context: .
         file: '${{ github.action_path }}/../Dockerfile'
         platforms: ${{ inputs.platform }}
         build-args: |
