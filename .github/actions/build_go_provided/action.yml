@@ -45,11 +45,15 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: gh release download "${{ inputs.release }}" --repo "explore-flights/libduckdb" --pattern "${{ inputs.file }}" --output "libduckdb_bundle.a"
+    - name: 'Setup QEMU'
+      uses: docker/setup-qemu-action@v3
+    - name: 'Setup Buildx'
+      uses: docker/setup-buildx-action@v3
     - name: 'Build Go Application'
       uses: docker/build-push-action@v6
       with:
         push: false
-        file: '${{ github.action_path }}/.github/actions/Dockerfile'
+        file: '${{ github.action_path }}/../Dockerfile'
         platforms: ${{ inputs.platform }}
         build-args: |
           IMAGE=${{ inputs.image_arch }}

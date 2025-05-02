@@ -55,7 +55,7 @@ runs:
       with:
         push: false
         context: ${{ github.action_path }}
-        file: '${{ github.action_path }}/Dockerfile'
+        file: '${{ github.action_path }}/../../../Dockerfile'
         platforms: ${{ inputs.platform }}
         build-args: |
           IMAGE=${{ inputs.image_arch }}
@@ -71,7 +71,8 @@ runs:
       uses: docker/build-push-action@v6
       with:
         push: false
-        file: '${{ github.action_path }}/.github/actions/Dockerfile'
+        context: .
+        file: '${{ github.action_path }}/../Dockerfile'
         platforms: ${{ inputs.platform }}
         build-args: |
           IMAGE=${{ inputs.image_arch }}
