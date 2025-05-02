@@ -1,0 +1,87 @@
+name: 'Build libduckdb Go'
+description: 'Builds a go application with a libduckdb build using github.com/marcboeker/go-duckdb'
+
+inputs:
+  platform:
+    description: 'Docker platform to use for the build (i.e. linux/amd64)'
+    required: true
+  image_arch:
+    description: 'Valid arch suffix for quay.io/pypa/manylinux_2_28_ (i.e. x86_64 or aarch64)'
+    required: true
+  extension_config_path:
+    description: 'Path to the DuckDB extension config'
+    required: true
+  vcpkg_target_triplet:
+    description: 'A valid VCPKG Target Triplet (i.e. x64-linux or arm64-linux)'
+    required: true
+  duckdb_git_ref:
+    description: 'Git ref of DuckDB to build (i.e. v1.2.2)'
+    required: true
+  vcpkg_git_ref:
+    description: 'Git ref for VCPKG'
+    required: true
+    default: 'ce613c41372b23b1f51333815feb3edd87ef8a8b'
+  go_os:
+    description: 'OS for the build (i.e. linux). This is used to download go for the build host.'
+    required: true
+    default: 'linux'
+  go_version:
+    description: 'Full go version. This is used to download go for the build host.'
+    required: true
+  go_arch:
+    description: 'Go arch. This is used to download go for the build host.'
+    required: true
+  go_build_relative_dir:
+    description: 'Relative directory containing the go app to build'
+    required: true
+    default: ''
+  go_build_tags:
+    description: 'Go build tags, comma separated'
+    required: true
+    default: ''
+  go_build_output_file:
+    description: 'Where to place the resulting application'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Setup QEMU'
+      uses: docker/setup-qemu-action@v3
+    - name: 'Setup Buildx'
+      uses: docker/setup-buildx-action@v3
+    - name: 'Build DuckDB'
+      uses: docker/build-push-action@v6
+      with:
+        push: false
+        context: ${{ github.action_path }}
+        file: '${{ github.action_path }}/Dockerfile'
+        platforms: ${{ inputs.platform }}
+        build-args: |
+          IMAGE=${{ inputs.image_arch }}
+          EXTENSION_CONFIG=${{ inputs.extension_config_path }}
+          VCPKG_TARGET_TRIPLET=${{ inputs.vcpkg_target_triplet }}
+          DUCKDB_GIT_REF=${{ inputs.duckdb_git_ref }}
+          VCPKG_GIT_REF=${{ inputs.vcpkg_git_ref }}
+        outputs: 'type=local,dest=${{ github.action_path }}/duckdb_dist'
+    - name: 'Move DuckDB Lib to Go Build Context'
+      shell: bash
+      run: mv "${{ github.action_path }}/duckdb_dist/libduckdb_bundle.a" "libduckdb_bundle.a"
+    - name: 'Build Go Application'
+      uses: docker/build-push-action@v6
+      with:
+        push: false
+        file: '${{ github.action_path }}/.github/actions/Dockerfile'
+        platforms: ${{ inputs.platform }}
+        build-args: |
+          IMAGE=${{ inputs.image_arch }}
+          GOOS=${{ inputs.go_os }}
+          GOVERSION=${{ inputs.go_version }}
+          GOARCH=${{ inputs.go_arch }}
+          GO_BUILD_TAGS=${{ inputs.go_build_tags }}
+          GO_BUILD_RELATIVE_DIR=${{ inputs.go_build_relative_dir }}
+          DUCKDB_LIB_PATH=libduckdb_bundle.a
+        outputs: 'type=local,dest=${{ github.action_path }}/go_dist'
+    - name: 'Move Go Application'
+      shell: bash
+      run: mv "${{ github.action_path }}/go_dist/__libduckdb_output_binary" "${{ inputs.go_build_output_file }}"

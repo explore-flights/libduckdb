@@ -1,0 +1,65 @@
+name: 'Build libduckdb Go'
+description: 'Builds a go application with a libduckdb build using github.com/marcboeker/go-duckdb'
+
+inputs:
+  release:
+    description: 'Which release to download'
+    required: true
+    default: 'v1.2.2-v2+parquet.json.icu.httpfs.aws'
+  file:
+    description: 'Which file from the release to download'
+    required: true
+  platform:
+    description: 'Docker platform to use for the build (i.e. linux/amd64)'
+    required: true
+  image_arch:
+    description: 'Valid arch suffix for quay.io/pypa/manylinux_2_28_ (i.e. x86_64 or aarch64)'
+    required: true
+  go_os:
+    description: 'OS for the build (i.e. linux). This is used to download go for the build host.'
+    required: true
+    default: 'linux'
+  go_version:
+    description: 'Full go version. This is used to download go for the build host.'
+    required: true
+  go_arch:
+    description: 'Go arch. This is used to download go for the build host.'
+    required: true
+  go_build_relative_dir:
+    description: 'Relative directory containing the go app to build'
+    required: true
+    default: ''
+  go_build_tags:
+    description: 'Go build tags, comma separated'
+    required: true
+    default: ''
+  go_build_output_file:
+    description: 'Where to place the resulting application'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Download DuckDB Lib'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: gh release download "${{ inputs.release }}" --repo "explore-flights/libduckdb" --pattern "${{ inputs.file }}" --output "libduckdb_bundle.a"
+    - name: 'Build Go Application'
+      uses: docker/build-push-action@v6
+      with:
+        push: false
+        file: '${{ github.action_path }}/.github/actions/Dockerfile'
+        platforms: ${{ inputs.platform }}
+        build-args: |
+          IMAGE=${{ inputs.image_arch }}
+          GOOS=${{ inputs.go_os }}
+          GOVERSION=${{ inputs.go_version }}
+          GOARCH=${{ inputs.go_arch }}
+          GO_BUILD_TAGS=${{ inputs.go_build_tags }}
+          GO_BUILD_RELATIVE_DIR=${{ inputs.go_build_relative_dir }}
+          DUCKDB_LIB_PATH=libduckdb_bundle.a
+        outputs: 'type=local,dest=${{ github.action_path }}/go_dist'
+    - name: 'Move Go Application'
+      shell: bash
+      run: mv "${{ github.action_path }}/go_dist/__libduckdb_output_binary" "${{ inputs.go_build_output_file }}"
