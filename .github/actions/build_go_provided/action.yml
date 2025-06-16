@@ -37,29 +37,13 @@ inputs:
     description: 'Where to place the resulting application'
     required: true
   use_go_cache:
-    description: 'Whether to use the go cache'
-    required: true
+    description: 'No longer used'
+    required: false
     default: 'false'
 
 runs:
   using: 'composite'
   steps:
-    - name: 'Prepare go cache (1)'
-      shell: bash
-      run: mkdir "libduckdb_gocache" && mkdir "libduckdb_gomodcache"
-    - name: 'Prepare go cache (2)'
-      if: ${{ inputs.use_go_cache == 'true' }}
-      shell: bash
-      run: |
-        go_cache=$(go env GOCACHE || echo "")
-        if [ ! -z "$go_mod_cache" ]; then
-          (cp -r "${go_cache}/" "libduckdb_gocache/" || echo "Failed to copy gocache. Proceeding without")
-        fi
-        
-        go_mod_cache=$(go env GOMODCACHE || echo "")
-        if [ ! -z "$go_mod_cache" ]; then
-          (cp -r "${go_mod_cache}/" "libduckdb_gomodcache/" || echo "Failed to copy gomodcache. Proceeding without")
-        fi
     - name: 'Download DuckDB Lib'
       shell: bash
       env:
@@ -83,25 +67,8 @@ runs:
           GOARCH=${{ inputs.go_arch }}
           GO_BUILD_TAGS=${{ inputs.go_build_tags }}
           GO_BUILD_RELATIVE_DIR=${{ inputs.go_build_relative_dir }}
-          GO_CACHE=libduckdb_gocache
-          GO_MOD_CACHE=libduckdb_gomodcache
           DUCKDB_LIB_PATH=libduckdb_bundle.a
         outputs: 'type=local,dest=${{ github.action_path }}/go_dist'
-    - name: 'Copy populated go cache'
-      if: ${{ inputs.use_go_cache == 'true' }}
-      shell: bash
-      run: |
-        go_cache=$(go env GOCACHE || echo "")
-        if [ ! -z "$go_cache" ]; then
-          (stat "$go_cache" || mkdir -p "$go_cache")
-          (cp -rf "${{ github.action_path }}/go_dist/__libduckdb_gocache/" "$go_cache/" || echo "Failed to copy gocache. Proceeding without")
-        fi
-        
-        go_mod_cache=$(go env GOMODCACHE || echo "")
-        if [ ! -z "$go_mod_cache" ]; then
-          (stat "$go_mod_cache" || mkdir -p "$go_mod_cache")
-          (cp -rf "${{ github.action_path }}/go_dist/__libduckdb_gomodcache/" "$go_mod_cache/" || echo "Failed to copy gomodcache. Proceeding without")
-        fi
     - name: 'Move Go Application'
       shell: bash
       run: mv "${{ github.action_path }}/go_dist/__libduckdb_output_binary" "${{ inputs.go_build_output_file }}"
