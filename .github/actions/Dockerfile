@@ -7,6 +7,7 @@ ARG GOARCH
 ARG DUCKDB_LIB_PATH
 ARG GO_BUILD_TAGS=''
 ARG GO_BUILD_RELATIVE_DIR=''
+ARG GO_TEST_CMD=''
 
 # install go
 ADD "https://go.dev/dl/go$GOVERSION.$GOOS-$GOARCH.tar.gz" ./go.tar.gz
@@ -26,6 +27,7 @@ WORKDIR /build
 COPY ../.. .
 
 WORKDIR /build/$GO_BUILD_RELATIVE_DIR
+RUN if [[ -z "$GO_TEST_CMD" ]] ; then echo 'GO_TEST_CMD not provided; skipping tests' ; else eval "$GO_TEST_CMD -tags 'duckdb_use_static_lib,$GO_BUILD_TAGS'" ; fi
 RUN go build -o /build/__libduckdb_output_binary -tags "duckdb_use_static_lib,$GO_BUILD_TAGS"
 
 FROM scratch

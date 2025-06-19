@@ -46,6 +46,10 @@ inputs:
     description: 'No longer used'
     required: false
     default: 'false'
+  go_test_cmd:
+    description: 'Go test command; leave empty to skip tests'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -88,6 +92,7 @@ runs:
           GOARCH=${{ inputs.go_arch }}
           GO_BUILD_TAGS=${{ inputs.go_build_tags }}
           GO_BUILD_RELATIVE_DIR=${{ inputs.go_build_relative_dir }}
+          GO_TEST_CMD=${{ inputs.go_test_cmd }}
           DUCKDB_LIB_PATH=libduckdb_bundle.a
         outputs: 'type=local,dest=${{ github.action_path }}/go_dist'
     - name: 'Move Go Application'
