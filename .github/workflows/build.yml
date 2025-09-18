@@ -37,7 +37,7 @@ jobs:
             IMAGE=${{ matrix.config.image }}
             EXTENSION_CONFIG=extension_config.cmake
             VCPKG_TARGET_TRIPLET=${{ matrix.config.vcpkg_target_triplet }}
-            DUCKDB_GIT_REF=v1.3.2
+            DUCKDB_GIT_REF=v1.4.0
             VCPKG_GIT_REF=ce613c41372b23b1f51333815feb3edd87ef8a8b
           outputs: "type=local,dest=./dist"
       - name: 'Rename File'

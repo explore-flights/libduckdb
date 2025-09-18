@@ -5,11 +5,11 @@ duckdb_extension_load(icu)
 duckdb_extension_load(httpfs
     LOAD_TESTS
     GIT_URL https://github.com/duckdb/duckdb-httpfs
-    GIT_TAG af7bcaf40c775016838fef4823666bd18b89b36b
+    GIT_TAG 354d3f436a33f80f03a74419e76eb59459e19168
     INCLUDE_DIR extension/httpfs/include
 )
 duckdb_extension_load(aws
     LOAD_TESTS
     GIT_URL https://github.com/duckdb/duckdb-aws
-    GIT_TAG b73faadeaa4d2c880deb949771baf570f42fe8cc
+    GIT_TAG 812ce80fde0bfa6e4641b6fd798087349a610795
 )
