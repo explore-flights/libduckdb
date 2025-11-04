@@ -5,7 +5,7 @@ inputs:
   release:
     description: 'Which release to download'
     required: true
-    default: 'v1.4.0-v1+parquet.json.icu.httpfs.aws'
+    default: 'v1.4.1-v1+parquet.json.icu.httpfs.aws'
   file:
     description: 'Which file from the release to download'
     required: true
