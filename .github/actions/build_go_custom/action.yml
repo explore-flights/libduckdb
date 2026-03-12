@@ -20,7 +20,7 @@ inputs:
   vcpkg_git_ref:
     description: 'Git ref for VCPKG'
     required: true
-    default: 'ce613c41372b23b1f51333815feb3edd87ef8a8b'
+    default: '84bab45d415d22042bd0b9081aea57f362da3f35'
   go_os:
     description: 'OS for the build (i.e. linux). This is used to download go for the build host.'
     required: true
@@ -55,14 +55,14 @@ runs:
   using: 'composite'
   steps:
     - name: 'Setup QEMU'
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@v4
     - name: 'Setup Buildx'
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
     - name: 'Copy DuckDB Extension Config to DuckDB Build Context'
       shell: bash
       run: cp "${{ inputs.extension_config_path }}" "${{ github.action_path }}/extension_config.cmake"
     - name: 'Build DuckDB'
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         push: false
         context: ${{ github.action_path }}
@@ -79,7 +79,7 @@ runs:
       shell: bash
       run: mv "${{ github.action_path }}/duckdb_dist/libduckdb_bundle.a" "libduckdb_bundle.a"
     - name: 'Build Go Application'
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         push: false
         context: .

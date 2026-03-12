@@ -1,43 +1,43 @@
-ARG IMAGE=$TARGETARCH
-FROM quay.io/pypa/manylinux_2_28_$IMAGE AS build_duckdb
+ARG IMAGE_REFERENCE="scratch"
+FROM $IMAGE_REFERENCE AS build_duckdb
 
 ARG EXTENSION_CONFIG
 ARG VCPKG_TARGET_TRIPLET
 ARG DUCKDB_GIT_REF
-ARG VCPKG_GIT_REF
+ARG VCPKG_TARGET_TRIPLET
 
 WORKDIR /build
 
 # install dependencies
-RUN yum install -y perl-IPC-Cmd curl zip unzip tar gcc gcc-c++ ninja-build
+RUN yum install -y gcc-toolset-14-libasan-devel gcc-toolset-14-libubsan-devel
+
 # checkout duckdb
 RUN (mkdir duckdb && cd duckdb && git init && git remote add origin "https://github.com/duckdb/duckdb.git" && git fetch --all && git checkout "$DUCKDB_GIT_REF")
-# checkout vcpkg
-RUN (mkdir duckdb/vcpkg && cd duckdb/vcpkg && git init && git remote add origin "https://github.com/microsoft/vcpkg.git" && git fetch origin "$VCPKG_GIT_REF" && git checkout "$VCPKG_GIT_REF")
 
-# setup vcpkg
-RUN (cd duckdb/vcpkg && ./bootstrap-vcpkg.sh)
+# copy ci tools
+COPY ./extension-ci-tools /build/extension-ci-tools
 
 # copy extension config
 COPY $EXTENSION_CONFIG ./extension_config.cmake
 
-ENV CMAKE_BUILD_PARALLEL_LEVEL=2
-ENV EXTENSION_CONFIGS="/build/extension_config.cmake"
-ENV ENABLE_EXTENSION_AUTOLOADING=1
-ENV ENABLE_EXTENSION_AUTOINSTALL=1
-ENV FORCE_WARN_UNUSED=1
 ENV VCPKG_TARGET_TRIPLET="$VCPKG_TARGET_TRIPLET"
-ENV VCPKG_ROOT="/build/duckdb/vcpkg"
-ENV VCPKG_TOOLCHAIN_PATH="/build/duckdb/vcpkg/scripts/buildsystems/vcpkg.cmake"
-ENV USE_MERGED_VCPKG_MANIFEST=1
-ENV STATIC_OPENSSL=1
-ENV STATIC_LIBCPP=1
-ENV EXTENSION_STATIC_BUILD=1
+ENV VCPKG_OVERLAY_PORTS="/build/extension-ci-tools/vcpkg_ports"
+ENV OPENSSL_ROOT_DIR="/build/duckdb/build/release/vcpkg_installed/$VCPKG_TARGET_TRIPLET"
+ENV OPENSSL_DIR="/build/duckdb/build/release/vcpkg_installed/$VCPKG_TARGET_TRIPLET"
+ENV OPENSSL_USE_STATIC_LIBS="true"
+ENV ENABLE_EXTENSION_AUTOINSTALL="1"
+ENV ENABLE_EXTENSION_AUTOLOADING="1"
+ENV LINUX_CI_IN_DOCKER="1"
+
+ENV EXTENSION_CONFIGS="/build/extension_config.cmake"
+ENV STATIC_OPENSSL="1"
+ENV STATIC_LIBCPP="1"
+ENV USE_MERGED_VCPKG_MANIFEST="1"
 
 # gather libs
 RUN make gather-libs -C ./duckdb
 
-FROM quay.io/pypa/manylinux_2_28_$IMAGE AS build_bundle
+FROM $IMAGE_REFERENCE AS build_bundle
 
 ARG VCPKG_TARGET_TRIPLET
 

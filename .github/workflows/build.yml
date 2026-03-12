@@ -2,12 +2,13 @@ name: 'Build'
 
 on:
   push:
+    branches:
+      - main
     tags:
       - '*'
 
 jobs:
   build_duckdb:
-    # https://github.com/duckdb/duckdb/blob/1a9dc44fc96725e03a258270bfe397460d882917/.github/workflows/BundleStaticLibs.yml#L163
     strategy:
       matrix:
         config:
@@ -15,31 +16,65 @@ jobs:
             image: x86_64
             vcpkg_target_triplet: x64-linux
             platform: linux/amd64
+            extension_ci_tools_dockerfile: linux_amd64
           - runner: ubuntu-24.04-arm
             image: aarch64
             vcpkg_target_triplet: arm64-linux
             platform: linux/arm64
+            extension_ci_tools_dockerfile: linux_arm64
     name: 'Build Static DuckDB Library (${{ matrix.config.vcpkg_target_triplet }})'
+    env:
+      DUCKDB_GIT_REF: v1.5.0
+    permissions:
+      contents: read
+      packages: write
     runs-on: ${{ matrix.config.runner }}
     steps:
       - name: 'Checkout'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: 'Setup QEMU'
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
       - name: 'Setup Buildx'
-        uses: docker/setup-buildx-action@v3
-      - name: 'Build'
-        uses: docker/build-push-action@v6
+        uses: docker/setup-buildx-action@v4
+      - name: 'Login to GitHub Container Registry'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: 'Checkout extension-ci-tools'
+        uses: actions/checkout@v6
+        with:
+          repository: 'duckdb/extension-ci-tools'
+          ref: ${{ env.DUCKDB_GIT_REF }}
+          path: 'extension-ci-tools'
+      - name: 'Build DuckDB Builder'
+        id: build_duckdb_builder
+        uses: docker/build-push-action@v7
+        with:
+          push: true
+          platforms: ${{ matrix.config.platform }}
+          file: 'extension-ci-tools/docker/${{ matrix.config.extension_ci_tools_dockerfile }}/Dockerfile'
+          context: ${{ github.workspace }}
+          tags: 'ghcr.io/explore-flights/libduckdb_builder:${{ env.DUCKDB_GIT_REF }}_${{ matrix.config.extension_ci_tools_dockerfile }}'
+          build-args: |
+            vcpkg_url=https://github.com/microsoft/vcpkg.git
+            vcpkg_commit=84bab45d415d22042bd0b9081aea57f362da3f35
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: 'Build DuckDB'
+        uses: docker/build-push-action@v7
         with:
           push: false
           platforms: ${{ matrix.config.platform }}
+          file: 'Dockerfile'
+          context: ${{ github.workspace }}
           build-args: |
-            IMAGE=${{ matrix.config.image }}
+            IMAGE_REFERENCE=ghcr.io/explore-flights/libduckdb_builder:${{ env.DUCKDB_GIT_REF }}_${{ matrix.config.extension_ci_tools_dockerfile }}
             EXTENSION_CONFIG=extension_config.cmake
             VCPKG_TARGET_TRIPLET=${{ matrix.config.vcpkg_target_triplet }}
-            DUCKDB_GIT_REF=v1.5.0
-            VCPKG_GIT_REF=ce613c41372b23b1f51333815feb3edd87ef8a8b
-          outputs: "type=local,dest=./dist"
+            DUCKDB_GIT_REF=${{ env.DUCKDB_GIT_REF }}
+          outputs: 'type=local,dest=./dist'
       - name: 'Rename File'
         run: mv "dist/libduckdb_bundle.a" "dist/libduckdb_bundle-${{ matrix.config.vcpkg_target_triplet }}.a"
       - name: 'Upload Artifact'
