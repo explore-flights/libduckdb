@@ -24,7 +24,8 @@ jobs:
             extension_ci_tools_dockerfile: linux_arm64
     name: 'Build Static DuckDB Library (${{ matrix.config.vcpkg_target_triplet }})'
     env:
-      DUCKDB_GIT_REF: v1.5.1
+      DUCKDB_GIT_REF: v1.5.2
+      EXTENSION_CI_TOOLS_GIT_REF: v1.5-variegata
     permissions:
       contents: read
       packages: write
@@ -46,7 +47,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: 'duckdb/extension-ci-tools'
-          ref: ${{ env.DUCKDB_GIT_REF }}
+          ref: ${{ env.EXTENSION_CI_TOOLS_GIT_REF }}
           path: 'extension-ci-tools'
       - name: 'Build DuckDB Builder'
         id: build_duckdb_builder
