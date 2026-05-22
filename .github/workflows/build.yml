@@ -25,7 +25,7 @@ jobs:
     name: 'Build Static DuckDB Library (${{ matrix.config.vcpkg_target_triplet }})'
     env:
       DUCKDB_GIT_REF: v1.5.2
-      EXTENSION_CI_TOOLS_GIT_REF: v1.5-variegata
+      EXTENSION_CI_TOOLS_GIT_REF: v1.5.2
     permissions:
       contents: read
       packages: write
